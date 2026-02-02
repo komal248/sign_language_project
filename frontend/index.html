@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Detection System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-sign-language"></i> Sign Language Translator</h1>
+            <p class="subtitle">Real-time American Sign Language (ASL) Letter Detection & Word Formation</p>
+        </header>
+
+        <div class="mode-selector">
+            <div class="mode active" data-mode="detection">
+                <i class="fas fa-hand-point-up"></i> Live Detection
+            </div>
+            <div class="mode" data-mode="training">
+                <i class="fas fa-brain"></i> Train Model
+            </div>
+            <div class="mode" data-mode="words">
+                <i class="fas fa-spell-check"></i> Word Builder
+            </div>
+        </div>
+
+        <!-- Detection Mode -->
+        <div class="mode-content active" id="detection-mode">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div class="input-selector">
+                        <h2><i class="fas fa-input"></i> Select Input Source</h2>
+                        <div class="source-buttons">
+                            <button class="source-btn active" id="liveBtn">
+                                <i class="fas fa-video"></i> Live Camera
+                            </button>
+                            <button class="source-btn" id="imageBtn">
+                                <i class="fas fa-image"></i> Upload Image
+                            </button>
+                            <button class="source-btn" id="videoBtn">
+                                <i class="fas fa-film"></i> Upload Video
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="camera-container" id="cameraContainer">
+                        <div class="camera-view">
+                            <video id="webcam" autoplay playsinline></video>
+                            <canvas id="outputCanvas"></canvas>
+                            <div class="camera-overlay">
+                                <div class="hand-area">
+                                    <div class="area-label">Show Hand Here</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="camera-controls">
+                            <button id="startCamera" class="control-btn primary">
+                                <i class="fas fa-play"></i> Start Camera
+                            </button>
+                            <button id="stopCamera" class="control-btn secondary">
+                                <i class="fas fa-stop"></i> Stop Camera
+                            </button>
+                            <button id="captureFrame" class="control-btn success">
+                                <i class="fas fa-camera"></i> Capture & Predict
+                            </button>
+                            <button id="autoPredict" class="control-btn warning">
+                                <i class="fas fa-robot"></i> Auto Predict
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="upload-container" id="uploadContainer" style="display: none;">
+                        <div class="upload-box" id="imageUploadBox">
+                            <h3><i class="fas fa-cloud-upload-alt"></i> Upload Image</h3>
+                            <div class="drop-zone" id="dropZone">
+                                <i class="fas fa-file-image fa-3x"></i>
+                                <p>Drag & Drop Image Here</p>
+                                <p class="small">or</p>
+                                <button class="browse-btn">Browse Files</button>
+                                <input type="file" id="imageInput" accept="image/*">
+                            </div>
+                            <div id="imagePreview" class="preview-area"></div>
+                        </div>
+
+                        <div class="upload-box" id="videoUploadBox" style="display: none;">
+                            <h3><i class="fas fa-video"></i> Upload Video</h3>
+                            <div class="drop-zone">
+                                <i class="fas fa-file-video fa-3x"></i>
+                                <p>Drag & Drop Video Here</p>
+                                <p class="small">or</p>
+                                <button class="browse-btn">Browse Files</button>
+                                <input type="file" id="videoInput" accept="video/*">
+                            </div>
+                            <div id="videoPreview" class="preview-area"></div>
+                            <div class="video-controls" id="videoControls" style="display: none;">
+                                <button id="playVideo" class="control-btn">
+                                    <i class="fas fa-play"></i> Play
+                                </button>
+                                <button id="pauseVideo" class="control-btn">
+                                    <i class="fas fa-pause"></i> Pause
+                                </button>
+                                <button id="analyzeVideo" class="control-btn success">
+                                    <i class="fas fa-search"></i> Analyze Frames
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gesture-info">
+                        <h3><i class="fas fa-info-circle"></i> Gesture Guide</h3>
+                        <div class="gesture-grid" id="gestureGuide">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <div class="prediction-section">
+                        <div class="prediction-card">
+                            <h2><i class="fas fa-hand-paper"></i> Current Prediction</h2>
+                            <div class="prediction-display">
+                                <div class="predicted-letter" id="predictedLetter">--</div>
+                                <div class="letter-name" id="letterName">No prediction yet</div>
+                                <div class="confidence-meter">
+                                    <div class="meter-label">
+                                        <span>Confidence:</span>
+                                        <span id="confidenceValue">0%</span>
+                                    </div>
+                                    <div class="meter-bar">
+                                        <div class="meter-fill" id="confidenceBar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="word-builder">
+                            <h2><i class="fas fa-keyboard"></i> Word Builder</h2>
+                            <div class="word-display">
+                                <div class="current-word" id="currentWord"></div>
+                                <div class="word-meaning" id="wordMeaning"></div>
+                            </div>
+                            <div class="word-controls">
+                                <button id="addLetter" class="word-btn">
+                                    <i class="fas fa-plus"></i> Add to Word
+                                </button>
+                                <button id="clearWord" class="word-btn secondary">
+                                    <i class="fas fa-trash"></i> Clear Word
+                                </button>
+                                <button id="saveWord" class="word-btn success">
+                                    <i class="fas fa-save"></i> Save Word
+                                </button>
+                                <button id="speakWord" class="word-btn warning">
+                                    <i class="fas fa-volume-up"></i> Speak
+                                </button>
+                            </div>
+                            <div class="suggestions">
+                                <h4>Quick Words:</h4>
+                                <div class="suggestion-buttons">
+                                    <button class="suggest-btn" data-word="HELLO">HELLO</button>
+                                    <button class="suggest-btn" data-word="THANK YOU">THANK YOU</button>
+                                    <button class="suggest-btn" data-word="YES">YES</button>
+                                    <button class="suggest-btn" data-word="NO">NO</button>
+                                    <button class="suggest-btn" data-word="HELP">HELP</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="history-section">
+                        <div class="history-card">
+                            <div class="history-header">
+                                <h2><i class="fas fa-history"></i> Prediction History</h2>
+                                <button id="clearHistory" class="icon-btn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="history-list" id="historyList">
+                                <div class="empty-history">
+                                    <i class="fas fa-history fa-2x"></i>
+                                    <p>No predictions yet</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stats-card">
+                            <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
+                            <div class="stats-grid">
+                                <div class="stat">
+                                    <div class="stat-value" id="totalPredictions">0</div>
+                                    <div class="stat-label">Total Predictions</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value" id="accuracyRate">0%</div>
+                                    <div class="stat-label">Accuracy</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-value" id="wordsBuilt">0</div>
+                                    <div class="stat-label">Words Built</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Mode -->
+        <div class="mode-content" id="training-mode">
+            <div class="training-container">
+                <h2><i class="fas fa-brain"></i> Model Training</h2>
+                <div class="training-steps">
+                    <div class="step active">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Collect Data</h3>
+                            <p>Show each letter sign to webcam to collect training data</p>
+                            <div class="collection-controls">
+                                <select id="letterSelect" class="form-select">
+                                    <option value="A">Letter A</option>
+                                    <option value="B">Letter B</option>
+                                    <!-- Other letters -->
+                                </select>
+                                <button id="startCollection" class="btn primary">
+                                    <i class="fas fa-record"></i> Start Collection
+                                </button>
+                                <button id="stopCollection" class="btn secondary" disabled>
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                                <div class="counter">
+                                    <span id="collectedCount">0</span> images collected
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Train Model</h3>
+                            <p>Train CNN model with collected data</p>
+                            <button id="trainModel" class="btn success">
+                                <i class="fas fa-cogs"></i> Train Model Now
+                            </button>
+                            <div class="training-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill"></div>
+                                </div>
+                                <div class="progress-text">Training...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Test Model</h3>
+                            <p>Test the trained model accuracy</p>
+                            <button id="testModel" class="btn warning">
+                                <i class="fas fa-vial"></i> Test Model
+                            </button>
+                            <div class="test-results" id="testResults"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Mode -->
+        <div class="mode-content" id="words-mode">
+            <div class="words-container">
+                <h2><i class="fas fa-spell-check"></i> Word Dictionary</h2>
+                <div class="saved-words" id="savedWords">
+                    <!-- Saved words will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
